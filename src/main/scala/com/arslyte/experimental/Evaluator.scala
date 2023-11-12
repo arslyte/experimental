@@ -1,5 +1,7 @@
 package com.arslyte.experimental
 
+import kantan.xpath.implicits._
+import kantan.xpath.{DecodeResult, Query}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions.udf
@@ -32,30 +34,39 @@ class Evaluator extends Serializable {
     string.toUpperCase
   }.toOption
 
+  private def xpath(xml: String, path: Query[DecodeResult[String]]): Option[String] = Try {
+    xml.unsafeEvalXPath[String](path)
+  }.toOption
+
   // define how to evaluate a <compiled> stack
   private def evaluate(compiled: Compiled): Row => Option[Any] = (row: Row) => {
     compiled match {
       case Compiled.LitStr(s) => Some(s)
       case Compiled.LitInt(i) => Some(i)
+      case Compiled.LitXPath(xpath) => Some(xpath)
       case Compiled.Call(name, args) =>
         name match {
           case "col" =>
-            val evaluated = evaluate(args.head)(row).orNull.asInstanceOf[String]
-            col(row, evaluated)
+            val name = evaluate(args.head)(row).orNull.asInstanceOf[String]
+            col(row, name)
           case "upper" =>
-            val evaluated = evaluate(args.head)(row).orNull.asInstanceOf[String]
-            upper(evaluated)
+            val string = evaluate(args.head)(row).orNull.asInstanceOf[String]
+            upper(string)
           case "lower" =>
-            val evaluated = evaluate(args.head)(row).orNull.asInstanceOf[String]
-            lower(evaluated)
+            val string = evaluate(args.head)(row).orNull.asInstanceOf[String]
+            lower(string)
           case "split" =>
-            val evaluated = evaluate(args.head)(row).orNull.asInstanceOf[String]
-            val delimiterEvaluated = evaluate(args(1))(row).orNull.asInstanceOf[String]
-            split(evaluated, delimiterEvaluated)
+            val string = evaluate(args.head)(row).orNull.asInstanceOf[String]
+            val delimiter = evaluate(args(1))(row).orNull.asInstanceOf[String]
+            split(string, delimiter)
           case "element_at" =>
-            val evaluated = evaluate(args.head)(row).orNull.asInstanceOf[Array[Any]]
-            val indexEvaluated = evaluate(args(1))(row).orNull.asInstanceOf[Int]
-            elementAt(evaluated, indexEvaluated)
+            val array = evaluate(args.head)(row).orNull.asInstanceOf[Array[Any]]
+            val index = evaluate(args(1))(row).orNull.asInstanceOf[Int]
+            elementAt(array, index)
+          case "xpath" =>
+            val xml = evaluate(args.head)(row).orNull.asInstanceOf[String]
+            val path = evaluate(args(1))(row).orNull.asInstanceOf[Query[DecodeResult[String]]]
+            xpath(xml, path)
         }
     }
   }
@@ -74,5 +85,4 @@ object Evaluator extends Serializable {
 
   def apply(implicit fxs: Map[String, Row => Option[String]]): UserDefinedFunction =
     udf { (row: Row, key: String) => this.evaluate(row, key) }
-
 }

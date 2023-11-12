@@ -10,6 +10,7 @@
         <!-- Scala -->
         <scala.version.major>2.11</scala.version.major>
         <scala.version>2.11.12</scala.version>
+        <kantan-xpath.version>0.5.0</kantan-xpath.version>
 
         <!-- Maven -->
         <maven-compiler-plugin.source>1.8</maven-compiler-plugin.source>
@@ -39,6 +40,11 @@
             <artifactId>scala-compiler</artifactId>
             <version>${scala.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.nrinaudo</groupId>
+            <artifactId>kantan.xpath_${scala.version.major}</artifactId>
+            <version>${kantan-xpath.version}</version>
         </dependency>
 
         <!-- JUnit -->

@@ -51,6 +51,9 @@ class Parser extends Serializable {
         case "element_at" => Expr.ElementAt(
           parseExpr(fn.args.head),
           parseExpr(fn.args(1)))
+        case "xpath" => Expr.XPath(
+          parseExpr(fn.args.head),
+          parseExpr(fn.args(1)))
         case _ => throw new IllegalArgumentException(s"Unknown function: ${fn.name}")
       }
     }

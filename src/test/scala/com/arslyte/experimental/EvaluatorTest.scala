@@ -33,12 +33,17 @@ class EvaluatorTest {
   def testEvalUdf(): Unit = {
     val userInput = Map[String, String](
       "ABC" -> """LOWER(ELEMENT_AT(SPLIT(col("name"), "\."), -1))""",
-      "BCEE" -> """LOWER(COL("key"))"""
+      "BCEE" -> """LOWER(COL("key"))""",
+      "331E" -> """XPATH(COL("xml"), "/root/beauty")""",
+      "11e" -> """XPATH(COL("xml"), "/note/to")"""
     )
     val fxs: Map[String, Row => Option[String]] = userInput.map { case (key, value) =>
       val expr = this.parser.parse(value)
+      println(expr)
       val compiled = this.compiler.compile(expr)
+      println(compiled)
       val fx = this.evaluator.eval(compiled)
+      println(fx)
 
       key -> fx
     }
@@ -51,13 +56,15 @@ class EvaluatorTest {
     import spark.implicits._
 
     val df = spark.sparkContext.parallelize(Seq(
-      ("1", "ABC", "ABC.BCD.EEEDP"),
-      ("2", "BCEE", "ABC.BCD.eega"),
-      ("3", "ABC", "ABC.BCD.DDEsw"),
-      ("4", "BCEE", "ABC.BCD.cs"),
-      ("5", "BCEE", "Edward.Yifeng.Liu"),
-      ("6", "NA", "Edward.YOhs.Liddd")
-    )).toDF("id", "key", "name")
+      ("1", "ABC", "ABC.BCD.EEEDP", null),
+      ("2", "BCEE", "ABC.BCD.eega", null),
+      ("3", "ABC", "ABC.BCD.DDEsw", null),
+      ("4", "BCEE", "ABC.BCD.cs", null),
+      ("5", "BCEE", "Edward.Yifeng.Liu", null),
+      ("6", "NA", "Edward.YOhs.Liddd", null),
+      ("6", "331E", "Edward.YOhs.dde2", "<root><beauty>10/10</beauty></root>"),
+      ("7", "11e", "LOL.YESESES!", "<note><to>Tove</to><from>Jani</from><heading>Reminder</heading><body>Don't forget me this weekend!</body></note>")
+    )).toDF("id", "key", "name", "xml")
     df.show(10, truncate = false)
 
     val tx = df.withColumn("value", Evaluator(fxs)(struct("*"), col("key")))
